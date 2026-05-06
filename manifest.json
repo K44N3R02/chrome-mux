@@ -1,0 +1,29 @@
+{
+    "manifest_version": 3,
+    "name": "Chrome Mux",
+    "version": "0.1",
+    "description": "Manage your tabs with simple sessions, inspired by qutebrowser sessions",
+    "action": {
+        "default_popup": "html/popup.html",
+        "default_icon": "assets/processor-icon.png"
+    },
+    "permissions": ["tabs"],
+    "content_scripts": [
+
+    ],
+    "background": {
+
+    },
+    "minimum_chrome_version": "102",
+    "omnibox": {
+        "keyword": "mux"
+    },
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+                "default": "Ctrl+G",
+                "mac": "Command+G"
+            }
+        }
+    }
+}
