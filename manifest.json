@@ -7,7 +7,7 @@
         "default_popup": "html/popup.html",
         "default_icon": "assets/processor-icon.png"
     },
-    "permissions": ["tabs"],
+    "permissions": ["tabs", "storage"],
     "content_scripts": [
 
     ],
