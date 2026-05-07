@@ -8,6 +8,12 @@ class Session {
         this.windowList = await captureState();
     }
 
+    async openSession() {
+        const currentWindows = await chrome.windows.getAll();
+        this.windowList.forEach(async (w) => await w.open());
+        currentWindows.forEach(async (w) => await chrome.windows.remove(w.id));
+    }
+
     toJSON() {
         return {
             name: this.name,
@@ -28,6 +34,7 @@ class Session {
 
     htmlElement() {
         let sessionElement = document.createElement('div');
+        sessionElement.id = 'session-info';
 
         let sessionTitle = document.createElement('h2');
         sessionTitle.textContent = this.name;
@@ -53,6 +60,28 @@ class Window {
         this.isIncognito = isIncognito;
         this.tabList = tabList;
         this.activeTabIndex = activeTabIndex;
+    }
+
+    async open() {
+        const chromeWindow = await chrome.windows.create({
+            focused: this.isFocused,
+            incognito: this.isIncognito,
+        });
+
+        if (chromeWindow === undefined) {
+            alert('Unexpected Error: Window cannot be opened');
+            return;
+        }
+
+        const [dummyTab] = await chrome.tabs.query({
+            windowId: chromeWindow.id
+        });
+
+        this.tabList.entries().forEach(
+            async ([i, t]) => await t.open(this.activeTabIndex === i,
+                                           chromeWindow.id));
+
+        await chrome.tabs.remove(dummyTab.id);
     }
 
     toJSON() {
@@ -95,12 +124,22 @@ class Window {
 }
 
 class Tab {
+    /// scrollPosition and zoom has no effect yet.
     constructor(url, title, isPinned = false, scrollPosition = { x: 0, y: 0 }, zoom = 1) {
         this.url = url;
         this.title = title;
         this.isPinned = isPinned;
         this.scrollPosition = scrollPosition;
         this.zoom = zoom;
+    }
+
+    async open(isFocused, windowId) {
+        chrome.tabs.create({
+            active: isFocused,
+            pinned: this.isPinned,
+            url: this.url,
+            windowId: windowId,
+        });
     }
 
     serializeTab() {
@@ -134,6 +173,7 @@ class Tab {
     }
 }
 
+// TODO: figure if windows can be captured by the order of their creation, sorting on screen, last activity, etc.
 async function captureState() {
     const chromeWindows = await chrome.windows.getAll();
     let result = [];
@@ -159,11 +199,31 @@ async function captureState() {
     return result;
 }
 
-async function init() {
-    let session = new Session('test', []);
+let session = new Session('test', []);
+
+async function onSaveButtonClicked() {
     await session.capture();
     await session.saveToLocalStorage();
-    document.body.append(session.htmlElement());
 }
 
-init();
+async function onLoadButtonClicked() {
+    await session.openSession();
+}
+
+async function onShowButtonClicked() {
+    const sessionInfo = document.getElementById('session-info');
+    if (sessionInfo === null) {
+        document.body.append(session.htmlElement());
+    } else {
+        sessionInfo.remove();
+    }
+}
+
+const saveButton = document.getElementById('save-button');
+const loadButton = document.getElementById('load-button');
+const showButton = document.getElementById('show-button');
+
+saveButton.onclick = onSaveButtonClicked;
+loadButton.onclick = onLoadButtonClicked;
+showButton.onclick = onShowButtonClicked;
+
