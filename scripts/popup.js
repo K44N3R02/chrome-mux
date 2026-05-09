@@ -1,205 +1,20 @@
-class Session {
-    constructor(name, windowList) {
-        this.name = name;
-        this.windowList = windowList;
-    }
+import { Session } from './session.js';
+import { fuzzySearch } from './fuzzy.js';
 
-    async capture() {
-        this.windowList = await captureState();
-    }
+let session = await Session.getActiveSession();
 
-    async openSession() {
-        const currentWindows = await chrome.windows.getAll();
-        this.windowList.forEach(async (w) => await w.open());
-        currentWindows.forEach(async (w) => await chrome.windows.remove(w.id));
-    }
+const sessionList = (await chrome.storage.local.getKeys())
+    .filter((elem) => !elem.endsWith('SessionName'));
 
-    toJSON() {
-        return {
-            name: this.name,
-            windowList: this.windowList.map(win => win.toJSON()),
-        };
-    }
-
-    static fromJSON(json) {
-        const windowList = (json.windowList || []).map(winJson => Window.fromJSON(winJson));
-        return new Session(json.name, windowList);
-    }
-
-    async saveToLocalStorage() {
-        const data = {};
-        data[this.name] = this.toJSON();
-        await chrome.storage.local.set(data);
-    }
-
-    htmlElement() {
-        let sessionElement = document.createElement('div');
-        sessionElement.id = 'session-info';
-
-        let sessionTitle = document.createElement('h2');
-        sessionTitle.textContent = this.name;
-        sessionElement.append(sessionTitle);
-
-        let sessionWindows = document.createElement('ul');
-
-        for (let w of this.windowList) {
-            let windowElement = w.htmlElement();
-            sessionWindows.append(windowElement);
-        }
-
-        sessionElement.append(sessionWindows);
-
-        return sessionElement;
-    }
-}
-
-class Window {
-    constructor(id, isFocused, isIncognito, activeTabIndex = 0, tabList = []) {
-        this.id = id;
-        this.isFocused = isFocused;
-        this.isIncognito = isIncognito;
-        this.tabList = tabList;
-        this.activeTabIndex = activeTabIndex;
-    }
-
-    async open() {
-        const chromeWindow = await chrome.windows.create({
-            focused: this.isFocused,
-            incognito: this.isIncognito,
-        });
-
-        if (chromeWindow === undefined) {
-            alert('Unexpected Error: Window cannot be opened');
-            return;
-        }
-
-        const [dummyTab] = await chrome.tabs.query({
-            windowId: chromeWindow.id
-        });
-
-        this.tabList.entries().forEach(
-            async ([i, t]) => await t.open(this.activeTabIndex === i,
-                                           chromeWindow.id));
-
-        await chrome.tabs.remove(dummyTab.id);
-    }
-
-    toJSON() {
-        return {
-            id: this.id,
-            isFocused: this.isFocused,
-            isIncognito: this.isIncognito,
-            activeTabIndex: this.activeTabIndex,
-            tabList: this.tabList.map(tab => tab.toJSON()),
-        };
-    }
-
-    static fromJSON(json) {
-        const tabList = (json.tabList || []).map(tabJson => Tab.fromJSON(tabJson));
-        return new Window(
-            json.id,
-            json.isFocused,
-            json.isIncognito,
-            json.activeTabIndex,
-            tabList
-        );
-    }
-
-    htmlElement() {
-        let li = document.createElement('li');
-        const type = this.isIncognito ? 'incognito' : 'normal';
-        li.innerHTML = `${this.id} - ${type}<ul></ul>`;
-        const ul = li.querySelector('ul');
-
-        for (const [index, tab] of this.tabList.entries()) {
-            let elem = tab.htmlElement();
-            if (index === this.activeTabIndex) {
-                elem.style.color = 'green';
-            }
-            ul.append(elem);
-        }
-
-        return li;
-    }
-}
-
-class Tab {
-    /// scrollPosition and zoom has no effect yet.
-    constructor(url, title, isPinned = false, scrollPosition = { x: 0, y: 0 }, zoom = 1) {
-        this.url = url;
-        this.title = title;
-        this.isPinned = isPinned;
-        this.scrollPosition = scrollPosition;
-        this.zoom = zoom;
-    }
-
-    async open(isFocused, windowId) {
-        chrome.tabs.create({
-            active: isFocused,
-            pinned: this.isPinned,
-            url: this.url,
-            windowId: windowId,
-        });
-    }
-
-    serializeTab() {
-        return `pinned: ${this.isPinned}<br>title: ${this.title}<br>url: ${this.url}`;
-    }
-
-    toJSON() {
-        return {
-            url: this.url,
-            title: this.title,
-            isPinned: this.isPinned,
-            scrollPosition: this.scrollPosition,
-            zoom: this.zoom,
-        };
-    }
-
-    static fromJSON(json) {
-        return new Tab(
-            json.url,
-            json.title,
-            json.isPinned,
-            json.scrollPosition,
-            json.zoom
-        );
-    }
-
-    htmlElement() {
-        let li = document.createElement('li');
-        li.innerHTML = this.serializeTab();
-        return li;
-    }
-}
-
-// TODO: figure if windows can be captured by the order of their creation, sorting on screen, last activity, etc.
-async function captureState() {
-    const chromeWindows = await chrome.windows.getAll();
-    let result = [];
-
-    for (let chromeWindow of chromeWindows) {
-        let win = new Window(chromeWindow.id, chromeWindow.focused, chromeWindow.incognito);
-        result.push(win);
-
-        const chromeTabs = await chrome.tabs.query({
-            windowId: chromeWindow.id,
-        });
-        chromeTabs.sort((a, b) => a.index - b.index);
-
-        for (const chromeTab of chromeTabs) {
-            let tab = new Tab(chromeTab.url, chromeTab.title, chromeTab.pinned);
-            win.tabList.push(tab);
-            if (chromeTab.active) {
-                win.activeTabIndex = chromeTab.index;
-            }
-        }
-    }
-
-    return result;
-}
-
-let session = new Session('test', []);
+const heading = document.getElementById('heading');
+const searchForm = document.getElementById('search-form');
+const searchBar = document.getElementById('search');
+const resultList = document.getElementById('search-results');
+const saveButton = document.getElementById('save-button');
+const loadButton = document.getElementById('load-button');
+const loadWithoutSavingButton = document.getElementById('load-wo-save-button');
+const quickSwitchButton = document.getElementById('quick-switch-button');
+const showButton = document.getElementById('show-button');
 
 async function onSaveButtonClicked() {
     await session.capture();
@@ -207,6 +22,33 @@ async function onSaveButtonClicked() {
 }
 
 async function onLoadButtonClicked() {
+    if (searchBar.value.length === 0) {
+        return;
+    }
+
+    const fuzzyResult = fuzzySearch(sessionList, searchBar.value);
+
+    if (fuzzyResult.length === 0) {
+        return;
+    }
+
+    await onEnterPressed();
+}
+
+async function onLoadWithoutSavingButtonClicked() {
+    const fuzzyResult = fuzzySearch(sessionList, searchBar.value);
+
+    if (fuzzyResult.length === 0) {
+        return;
+    }
+
+    session = await Session.getFromLocalStorage(fuzzyResult[0].item);
+    await session.openSession();
+}
+
+async function onQuickSwitchButtonClicked() {
+    const { previousSessionName } = await chrome.storage.local.get("previousSessionName");
+    session = await Session.getFromLocalStorage(previousSessionName);
     await session.openSession();
 }
 
@@ -219,11 +61,51 @@ async function onShowButtonClicked() {
     }
 }
 
-const saveButton = document.getElementById('save-button');
-const loadButton = document.getElementById('load-button');
-const showButton = document.getElementById('show-button');
+function onSearchInputChanged() {
+    const result = fuzzySearch(sessionList, searchBar.value);
 
+    resultList.innerHTML = '';
+    result.forEach((data) => {
+        const elem = document.createElement('li');
+        elem.textContent = data.item;
+        resultList.append(elem);
+    });
+}
+
+async function onEnterPressed() {
+    const fuzzyResult = fuzzySearch(sessionList, searchBar.value);
+
+    if (fuzzyResult.length > 0) {
+        await session.capture();
+        await session.saveToLocalStorage();
+
+        const selectedSessionName = fuzzyResult[0].item;
+
+        session = await Session.openOrCreateSession(selectedSessionName);
+        await session.openSession();
+        return;
+    }
+
+    const selectedSessionName = searchBar.value;
+
+    await chrome.storage.local.set({ previousSessionName: session.name });
+    session = await Session.openOrCreateSession(selectedSessionName);
+    await chrome.storage.local.set({ activeSessionName: selectedSessionName });
+    window.close();
+}
+
+searchForm.onsubmit = async (event) => {
+    event.preventDefault();
+    await onEnterPressed();
+};
+
+searchBar.oninput = onSearchInputChanged;
 saveButton.onclick = onSaveButtonClicked;
 loadButton.onclick = onLoadButtonClicked;
+loadWithoutSavingButton.onclick = onLoadWithoutSavingButtonClicked;
+quickSwitchButton.onclick = onQuickSwitchButtonClicked;
 showButton.onclick = onShowButtonClicked;
+
+onSearchInputChanged();
+heading.innerHTML = `Chrome Mux: <i>${session.name}</i>`
 
