@@ -1,10 +1,11 @@
-import { Session } from './session.js';
-import { fuzzySearch } from './fuzzy.js';
-
-let session = await Session.getActiveSession();
-
-const sessionList = (await chrome.storage.local.getKeys())
-    .filter((elem) => !elem.endsWith('SessionName'));
+import {
+    getSuggestions,
+    saveActiveSession,
+    loadSession,
+    saveAndLoadNewSession,
+    createNewSession,
+    quickSwitch,
+} from './actions.js';
 
 const heading = document.getElementById('heading');
 const searchForm = document.getElementById('search-form');
@@ -16,40 +17,28 @@ const loadWithoutSavingButton = document.getElementById('load-wo-save-button');
 const quickSwitchButton = document.getElementById('quick-switch-button');
 const showButton = document.getElementById('show-button');
 
-async function onSaveButtonClicked() {
-    await session.capture();
-    await session.saveToLocalStorage();
-}
-
 async function onLoadButtonClicked() {
     if (searchBar.value.length === 0) {
         return;
     }
 
-    const fuzzyResult = fuzzySearch(sessionList, searchBar.value);
+    const suggestions = await getSuggestions(searchBar.value);
 
-    if (fuzzyResult.length === 0) {
+    if (suggestions.length === 0) {
         return;
     }
 
-    await onEnterPressed();
+    await saveAndLoadNewSession(suggestions[0].item);
 }
 
 async function onLoadWithoutSavingButtonClicked() {
-    const fuzzyResult = fuzzySearch(sessionList, searchBar.value);
+    const suggestions = await getSuggestions(searchBar.value);
 
-    if (fuzzyResult.length === 0) {
+    if (suggestions.length === 0) {
         return;
     }
 
-    session = await Session.getFromLocalStorage(fuzzyResult[0].item);
-    await session.openSession();
-}
-
-async function onQuickSwitchButtonClicked() {
-    const { previousSessionName } = await chrome.storage.local.get("previousSessionName");
-    session = await Session.getFromLocalStorage(previousSessionName);
-    await session.openSession();
+    loadSession(suggestions[0].item);
 }
 
 async function onShowButtonClicked() {
@@ -61,11 +50,11 @@ async function onShowButtonClicked() {
     }
 }
 
-function onSearchInputChanged() {
-    const result = fuzzySearch(sessionList, searchBar.value);
+async function onSearchInputChanged() {
+    const suggestions = await getSuggestions(searchBar.value);
 
     resultList.innerHTML = '';
-    result.forEach((data) => {
+    suggestions.forEach((data) => {
         const elem = document.createElement('li');
         elem.textContent = data.item;
         resultList.append(elem);
@@ -73,24 +62,15 @@ function onSearchInputChanged() {
 }
 
 async function onEnterPressed() {
-    const fuzzyResult = fuzzySearch(sessionList, searchBar.value);
+    const suggestions = await getSuggestions(searchBar.value);
+    console.log(suggestions);
 
-    if (fuzzyResult.length > 0) {
-        await session.capture();
-        await session.saveToLocalStorage();
-
-        const selectedSessionName = fuzzyResult[0].item;
-
-        session = await Session.openOrCreateSession(selectedSessionName);
-        await session.openSession();
+    if (suggestions.length > 0) {
+        saveAndLoadNewSession(suggestions[0].item);
         return;
     }
 
-    const selectedSessionName = searchBar.value;
-
-    await chrome.storage.local.set({ previousSessionName: session.name });
-    session = await Session.openOrCreateSession(selectedSessionName);
-    await chrome.storage.local.set({ activeSessionName: selectedSessionName });
+    await createNewSession(searchBar.value);
     window.close();
 }
 
@@ -100,12 +80,14 @@ searchForm.onsubmit = async (event) => {
 };
 
 searchBar.oninput = onSearchInputChanged;
-saveButton.onclick = onSaveButtonClicked;
+saveButton.onclick = saveActiveSession;
 loadButton.onclick = onLoadButtonClicked;
 loadWithoutSavingButton.onclick = onLoadWithoutSavingButtonClicked;
-quickSwitchButton.onclick = onQuickSwitchButtonClicked;
+quickSwitchButton.onclick = quickSwitch;
 showButton.onclick = onShowButtonClicked;
 
 onSearchInputChanged();
-heading.innerHTML = `Chrome Mux: <i>${session.name}</i>`
+
+const { activeSessionName } = await chrome.storage.local.get("activeSessionName");
+heading.innerHTML = `Chrome Mux: <i>${activeSessionName}</i>`
 

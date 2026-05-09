@@ -44,22 +44,6 @@ export class Session {
         return Session.fromJSON(json[sessionName]);
     }
 
-    static async openOrCreateSession(sessionName = null) {
-        if (sessionName === null) {
-            return await Session.getActiveSession();
-        }
-
-        const json = await chrome.storage.local.get(sessionName);
-        if (Object.keys(json).length > 0) {
-            return await Session.getFromLocalStorage(sessionName);
-        }
-
-        const newSession = new Session(sessionName, []);
-        await newSession.capture();
-        await newSession.saveToLocalStorage();
-        return newSession;
-    }
-
     async saveToLocalStorage() {
         const data = {};
         data[this.name] = this.toJSON();
