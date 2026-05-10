@@ -15,6 +15,10 @@
         "service_worker": "scripts/service-worker.js",
         "type": "module"
     },
+    "options_ui": {
+        "page": "html/settings.html",
+        "open_in_tab": true
+    },
     "minimum_chrome_version": "102",
     "omnibox": {
         "keyword": "mux"

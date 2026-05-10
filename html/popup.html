@@ -1,23 +1,27 @@
 <html>
     <head>
+        <link rel="stylesheet" href="style.css">
         <style>
-            body { width: 300px; padding: 10px; }
-            input { width: 100%; box-sizing: border-box; padding: 8px; }
-            ul { list-style: none; padding: 0; margin-top: 10px; }
-            li { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee }
+            body { width: 350px; }
+            input { width: 100%; margin-bottom: 10px; }
+            .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            #search-results { max-height: 200px; overflow-y: auto; }
         </style>
     </head>
     <body>
         <h1 id="heading">Chrome Mux</h1>
         <form id="search-form">
-            <input type="text" id="search" autofocus autocomplete="off">
+            <input type="text" id="search" autofocus autocomplete="off" placeholder="Search or create session...">
         </form>
         <ul id="search-results"></ul>
-        <button id="save-button">Save</button>
-        <button id="load-button">Load</button>
-        <button id="load-wo-save-button">Load without saving</button>
-        <button id="quick-switch-button">Quick switch</button>
-        <button id="show-button">Show</button>
+        <div class="actions">
+            <button id="save-button">Save Current</button>
+            <button id="load-button">Load (w/ Save)</button>
+            <button id="load-wo-save-button">Load (no Save)</button>
+            <button id="quick-switch-button">Quick Switch</button>
+            <button id="show-button">Toggle Details</button>
+            <button id="settings-button">Settings</button>
+        </div>
         <script src="../scripts/popup.js" type="module"></script>
     </body>
 </html>

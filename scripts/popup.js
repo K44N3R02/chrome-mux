@@ -16,6 +16,7 @@ const loadButton = document.getElementById('load-button');
 const loadWithoutSavingButton = document.getElementById('load-wo-save-button');
 const quickSwitchButton = document.getElementById('quick-switch-button');
 const showButton = document.getElementById('show-button');
+const settingsButton = document.getElementById('settings-button');
 
 async function onLoadButtonClicked() {
     if (searchBar.value.length === 0) {
@@ -85,6 +86,13 @@ loadButton.onclick = onLoadButtonClicked;
 loadWithoutSavingButton.onclick = onLoadWithoutSavingButtonClicked;
 quickSwitchButton.onclick = quickSwitch;
 showButton.onclick = onShowButtonClicked;
+settingsButton.onclick = async () => {
+    if (chrome.runtime.openOptionsPage) {
+        await chrome.runtime.openOptionsPage();
+    } else {
+        window.open(chrome.runtime.getURL('html/settings.html'));
+    }
+};
 
 onSearchInputChanged();
 
