@@ -11,10 +11,10 @@ export class Session {
     async openSession() {
         const currentWindows = await chrome.windows.getAll();
         this.windowList.forEach(async (w) => await w.open());
-        currentWindows.forEach(async (w) => await chrome.windows.remove(w.id));
         const { activeSessionName } = await chrome.storage.local.get("activeSessionName");
         await chrome.storage.local.set({ previousSessionName: activeSessionName });
         await chrome.storage.local.set({ activeSessionName: this.name });
+        currentWindows.forEach(async (w) => await chrome.windows.remove(w.id));
     }
 
     toJSON() {
