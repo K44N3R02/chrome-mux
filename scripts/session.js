@@ -152,7 +152,7 @@ class Tab {
     }
 
     async open(isFocused, windowId) {
-        chrome.tabs.create({
+        await chrome.tabs.create({
             active: isFocused,
             pinned: this.isPinned,
             url: this.url,
