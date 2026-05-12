@@ -13,9 +13,7 @@ const searchBar = document.getElementById('search');
 const resultList = document.getElementById('search-results');
 const saveButton = document.getElementById('save-button');
 const loadButton = document.getElementById('load-button');
-const loadWithoutSavingButton = document.getElementById('load-wo-save-button');
 const quickSwitchButton = document.getElementById('quick-switch-button');
-const showButton = document.getElementById('show-button');
 const settingsButton = document.getElementById('settings-button');
 
 async function onLoadButtonClicked() {
@@ -40,15 +38,6 @@ async function onLoadWithoutSavingButtonClicked() {
     }
 
     loadSession(suggestions[0].item);
-}
-
-async function onShowButtonClicked() {
-    const sessionInfo = document.getElementById('session-info');
-    if (sessionInfo === null) {
-        document.body.append(session.htmlElement());
-    } else {
-        sessionInfo.remove();
-    }
 }
 
 async function onSearchInputChanged() {
@@ -85,7 +74,6 @@ saveButton.onclick = saveActiveSession;
 loadButton.onclick = onLoadButtonClicked;
 loadWithoutSavingButton.onclick = onLoadWithoutSavingButtonClicked;
 quickSwitchButton.onclick = quickSwitch;
-showButton.onclick = onShowButtonClicked;
 settingsButton.onclick = async () => {
     if (chrome.runtime.openOptionsPage) {
         await chrome.runtime.openOptionsPage();

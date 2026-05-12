@@ -5,6 +5,7 @@
             body { width: 350px; }
             input { width: 100%; margin-bottom: 10px; }
             .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            #settings-button { grid-column: span 2; }
             #search-results { max-height: 200px; overflow-y: auto; }
         </style>
     </head>
@@ -19,7 +20,6 @@
             <button id="load-button">Load (w/ Save)</button>
             <button id="load-wo-save-button">Load (no Save)</button>
             <button id="quick-switch-button">Quick Switch</button>
-            <button id="show-button">Toggle Details</button>
             <button id="settings-button">Settings</button>
         </div>
         <script src="../scripts/popup.js" type="module"></script>
