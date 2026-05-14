@@ -13,6 +13,7 @@ const searchBar = document.getElementById('search');
 const resultList = document.getElementById('search-results');
 const saveButton = document.getElementById('save-button');
 const loadButton = document.getElementById('load-button');
+const loadWithoutSavingButton = document.getElementById('load-wo-save-button');
 const quickSwitchButton = document.getElementById('quick-switch-button');
 const settingsButton = document.getElementById('settings-button');
 
